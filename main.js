@@ -101,12 +101,12 @@ let cube_transforms = [];
 let transform_angles = [[90.0, 0.0, 270.0], [0.0, 90.0, 0.0], [0.0, 180.0, 0.0], [0.0, 270.0, 0.0], [270.0, 0.0, 90.0], [0.0, 0.0, 0.0]];
 let scale_axes = ["zx", "zy", "xy", "zy", "zx", "xy"];
 
-for (let i = 1; i <= 6; i++) {
+for (let i = 0; i < 6; i++) {
     let  q = glMatrix.quat.create();
-    let angle = transform_angles[i - 1];
+    let angle = transform_angles[i];
     let scale = glMatrix.vec3.fromValues(1.0, 1.0, 1.0);
     glMatrix.quat.fromEuler(q, angle[0], angle[1], angle[2], "zyx");
-    cubemats.push(new Material(gl, 'tex/painting0' + i + '.png', ext, scale, scale_axes[i - 1]));
+    cubemats.push(new Material(gl, 'tex/painting0' + i + '.png', ext, scale, scale_axes[i]));
     cube_transforms.push({rotation: q, scale: scale});
 }
 
