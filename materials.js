@@ -42,14 +42,13 @@ class Material{
                     scale[0] = scale_values[0];
                     scale[1] = scale_values[1];
                     break;
-                case "xz":
-                    scale[0] = scale_values[0];
-                    scale[2] = scale_values[1];
-                    break;
                 case "zy":
                     scale[2] = scale_values[0];
                     scale[1] = scale_values[1];
                     break;
+                case "zx":
+                    scale[0] = scale_values[1];
+                    scale[2] = scale_values[0];
                 default:
                     break;
             }

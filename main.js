@@ -9,6 +9,7 @@ let vertex_source =
             uniform mat4 projection;
             uniform mat4 view;
             uniform mat4 model;
+            uniform mat4 matnormal;
 
             in vec3 v_pos;
             in vec2 v_texcoord;
@@ -23,7 +24,7 @@ let vertex_source =
                 vec4 v_pos4 = view * model * vec4(v_pos, 1.0);
                 f_pos = vec3(v_pos4) / v_pos4.w;
                 f_texcoord = v_texcoord;
-                f_normal = mat3(transpose(inverse(model))) * v_normal;
+                f_normal = mat3(matnormal) * v_normal;
             }
         `;
 
@@ -41,36 +42,36 @@ let fragment_source =
 
             vec3 attenuate(float intensity, float distance){
                 const float const_k = 1.0;
-                const float lin_l = 0.09;
-                const float quad_q = 0.032;
-                float atten = intensity/(const_k + lin_l + (distance * distance) * quad_q * pow(distance,2.0));
+                const float lin_l = 0.7;
+                const float quad_q = 1.8;
+                float atten = intensity/(const_k + lin_l * distance + quad_q * (distance * distance));
                 return vec3(atten);
             }
             
             void main( void ) {
                 const vec3 camera_pos = vec3(0.0, 0.0, 1.25);
-                const vec3 light_pos = vec3(0.0, 0.0, 1.5);
+                const vec3 light_pos = vec3(0.0, 0.0, 1.25);
                 const vec3 light_color = vec3(1.0);
                 vec3 normal = normalize(f_normal);
                 vec3 light_dir = (light_pos - f_pos);
                 float distance = length(light_dir);
                 light_dir = normalize(light_dir);
-                vec3 attenuation = attenuate(1.15, distance);
+                vec3 ambient = 0.35 * light_color;
+                vec3 attenuation = attenuate(15.0, distance);
                 float diff = max(dot(light_dir, normal), 0.0);
                 vec3 diffuse = diff * light_color;
                 vec3 view_dir = normalize(camera_pos - f_pos);
-                vec3 reflect_dir = reflect(-light_dir, normal);
                 float spec = 0.0;
                 vec3 halfway_dir = normalize (light_dir + view_dir);
-                spec = pow(max(dot(normal, halfway_dir), 0.0), 16.0);
+                spec = pow(max(dot(normal, halfway_dir), 0.0), 8.0);
                 vec3 specular = spec * light_color;
-                vec3 lighting = attenuation * (diffuse + specular) * texture(texture0, f_texcoord).rgb;
+                vec3 lighting = ambient * (diffuse * attenuation + specular * attenuation) * texture(texture0, f_texcoord).rgb;
                 f_color = vec4(lighting, 1.0);
             }
         `;
 
 
-gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+//gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
 
 gl.enable( gl.DEPTH_TEST );
 gl.enable( gl.BLEND );
@@ -96,10 +97,9 @@ const ext = (
     gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
 );
 let cubemats = [];
-let blend_mode = null;
 let cube_transforms = [];
 let transform_angles = [[90.0, 0.0, 270.0], [0.0, 90.0, 0.0], [0.0, 180.0, 0.0], [0.0, 270.0, 0.0], [270.0, 0.0, 90.0], [0.0, 0.0, 0.0]];
-let scale_axes = ["xz", "zy", "xy", "zy", "xz", "xy"];
+let scale_axes = ["zx", "zy", "xy", "zy", "zx", "xy"];
 
 for (let i = 1; i <= 6; i++) {
     let  q = glMatrix.quat.create();
@@ -133,8 +133,8 @@ function render(now) {
     gl.uniformMatrix4fv(view_loc, false, view)
     cube.render(gl);
     gl.useProgram(null);
-
 }
+
 let accumulator = 0.0;
 let rotation_state = 0;
 let source_side = 0;
@@ -142,11 +142,18 @@ let target_side = 0;
 let new_transform = glMatrix.mat4.create();
 let new_scaling = glMatrix.mat4.create();
 let new_quat = glMatrix.quat.create();
+let scaling_vec = glMatrix.vec3.create();
+let is_random = false;
 function update() {
     if (rotation_state === 0) {
-        do {
-            target_side = Math.floor(Math.random() * 6);
-        } while (target_side === source_side);
+        if (is_random === true) {
+            do {
+                target_side = Math.floor(Math.random() * 6);
+            } while (target_side === source_side);
+        }
+        else {
+            target_side = (target_side + 1) % 6;
+        }
         rotation_state = 1;
     } 
     else if (rotation_state === 1) {
@@ -156,8 +163,7 @@ function update() {
         glMatrix.mat4.identity(new_scaling);
         if (accumulator < 1.0) {
             glMatrix.quat.lerp(new_quat, cube_transforms[source_side].rotation, cube_transforms[target_side].rotation, accumulator);
-            glMatrix.quat.normalize(new_quat, new_quat);
-            let scaling_vec = glMatrix.vec3.create();
+            glMatrix.quat.normalize(new_quat, new_quat); // comment this out if you want a funky effect
             glMatrix.vec3.lerp(scaling_vec, cube_transforms[source_side].scale, cube_transforms[target_side].scale, accumulator);
             glMatrix.vec3.normalize(scaling_vec, scaling_vec);
             glMatrix.mat4.fromQuat(new_transform, new_quat);

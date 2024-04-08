@@ -3,15 +3,16 @@ class Model {
     materials = [];
     rotations = [];
     transform = glMatrix.mat4.create();
+    matnormal = glMatrix.mat4.create();
     constructor(gl, program, vertices, indices, uvs, normals, materials) {
         this.program = program;
         this.materials = materials;
         this.model_loc = gl.getUniformLocation(program, "model");
+        this.matnormal_loc = gl.getUniformLocation(program, "matnormal")
         for (let i = 0; i < 6; i++) {
             this.meshes.push(new Mesh(gl, program, vertices[i], indices, uvs[i], normals[i]));
         }
     }
-
     static box_quads(gl, program, width, height, depth, materials) {
         let hwidth = width / 2.0;
         let hheight = height / 2.0;
@@ -144,6 +145,10 @@ class Model {
     }
     render(gl) {
         gl.uniformMatrix4fv(this.model_loc, false, this.transform);
+        glMatrix.mat4.identity(this.matnormal);
+        glMatrix.mat4.invert(this.matnormal, this.transform);
+        glMatrix.mat4.transpose(this.matnormal, this.matnormal);
+        gl.uniformMatrix4fv(this.matnormal_loc, false, this.matnormal);
         for (let i = 0; i < 6; i++) {
             this.meshes[i].render(gl, this.materials[i]);
         }
